@@ -1,0 +1,1 @@
+const str4 = str3 + `${str2}1` + func(2 + '3${}' + `${str1}2`)

@@ -1,0 +1,12 @@
+# eslint ignore these files
+
+# next.js
+next.config.js
+.next
+
+build
+dist
+public
+scripts
+
+src/pages/api/*

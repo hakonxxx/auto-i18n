@@ -1,0 +1,17 @@
+# let the Prettier CLI and editors know which files to not format
+
+# Ignore artifacts:
+dist
+build
+public
+coverage
+
+/out/
+
+# node
+node_modules
+package-lock.json
+yarn-lock.json
+
+# eslint
+.eslintcache
