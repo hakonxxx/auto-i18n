@@ -3,19 +3,22 @@ import { TransformExpressionName, ExpressionNamePairWithExpr } from '../types.js
 
 const transformExpressionName: TransformExpressionName = (expr, index) => {
   let exprName = ''
+  let short = false
   if (ts.isCallExpression(expr)) {
     expr = expr.expression
   }
   if (ts.isIdentifier(expr)) {
     exprName = expr.escapedText as string
+    short = true
   }
   return {
     key: exprName || index.toString(),
-    value: `{{${exprName || index}}}`
+    value: `{{${exprName || index}}}`,
+    short
   }
 }
 
-export const extractTemplateExpressionNames = (node: ts.TemplateExpression, transform = transformExpressionName) => {
+export const extractTemplateArgs = (node: ts.TemplateExpression, transform = transformExpressionName) => {
   const namePairs: ExpressionNamePairWithExpr[] = []
   let index = 0
   let transformed = ''

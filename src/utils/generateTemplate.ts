@@ -1,7 +1,6 @@
 import ts from 'typescript'
-import { isPlusBinaryExpression } from '../utils/is.js'
 
-export const composeTemplateExpression = (nodes: ts.Expression[]) => {
+export const generateTemplate = (nodes: ts.Expression[]) => {
   const args: (ts.Expression | string)[] = ['']
   nodes.forEach((node) => {
     if (ts.isParenthesizedExpression(node)) {
@@ -54,9 +53,4 @@ export const composeTemplateExpression = (nodes: ts.Expression[]) => {
     spans
   )
   return node.templateSpans.length ? node : ts.factory.createNoSubstitutionTemplateLiteral(node.head.text)
-}
-
-export const composePlusToTemplateExpression = (node: any) => {
-  if (!isPlusBinaryExpression(node)) return null
-  return composeTemplateExpression([node.left, node.right])
 }

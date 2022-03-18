@@ -2,9 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import ts from 'typescript'
 import { fileURLToPath } from 'url'
-import { composePlusToTemplateExpression } from './transformer/composeTemplateExpression.js'
-import { wrapWithI18nCall } from './transformer/i18nCall.js'
-import { isPlusBinaryExpression } from './utils/is.js'
+import { plusToTemplate } from './transformer/plusToTemplate.js'
+import { wrapCall } from './transformer/wrapCall.js'
+
+import { Core } from './core/index.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -20,26 +21,12 @@ const sourceFile = ts.createSourceFile(
   /*setParentNodes */ true
 )
 
-const result = ts.transform(
-  sourceFile,
-  [
-    (context) => (root) => {
-      const visit = (node) => {
-        const next = ts.visitEachChild(node, visit, context)
-        const transformedNode = composePlusToTemplateExpression(next)
-        if (transformedNode && ts.isTemplateExpression(transformedNode)) {
-          if (!isPlusBinaryExpression(node.parent) && ts.isTemplateExpression(transformedNode)) {
-            return wrapWithI18nCall(transformedNode, 'i18nCall')
-          }
-          return transformedNode
-        }
-        return next
-      }
-      return ts.visitNode(root, visit)
-    },
-  ],
-  { jsx: ts.JsxEmit.React }
-)
+const core = Core.getInstance(sourceFile)
+const job1 = [plusToTemplate, wrapCall]
+// const job2 = [parseCommentArgs, parseFunctionArgsAfterSomeComment]
+core.addJob(job1)
+
+const result = core.traverse()
 const transformedNodes = result.transformed[0]
 
 const printer: ts.Printer = ts.createPrinter({
@@ -47,4 +34,6 @@ const printer: ts.Printer = ts.createPrinter({
   removeComments: false
 })
 
-console.log(printer.printNode(ts.EmitHint.SourceFile, transformedNodes, sourceFile))
+const newCode = printer.printNode(ts.EmitHint.SourceFile, transformedNodes, sourceFile)
+
+console.log(newCode)
