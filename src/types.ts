@@ -15,11 +15,14 @@ export interface TransformExpressionName {
 }
 
 export interface Transform {
-  (originExpr: ts.Node, transformed: ts.Node | null, context: ts.TransformationContext, opts?: any): ts.Node | null
+  (originExpr: ts.Node, transformed: ts.Node | null, context: ts.TransformationContext, config?: CoreConfig): {
+    transformed: ts.Node | null
+    addition?: any[]
+  }
 }
 
 export interface Rule {
-  (originExpr: ts.Node, transformed: ts.Node | null, context: ts.TransformationContext, opts?: any): boolean
+  (originExpr: ts.Node, transformed: ts.Node | null, context: ts.TransformationContext, config?: CoreConfig): boolean
 }
 
 export type TaskConfig = {
@@ -33,9 +36,9 @@ export interface ITask {
 }
 
 export type JobConfig = {
-  ignoreInvalid?: boolean
-  lockKinds?: ts.SyntaxKind[]
-  unlockKinds?: ts.SyntaxKind[]
+  // ignoreInvalid?: boolean
+  lock?: (node: ts.Node, context: ts.TransformationContext) => boolean
+  unlock?: (node: ts.Node, context: ts.TransformationContext) => boolean
 }
 
 export interface IJob {
@@ -48,3 +51,13 @@ export type JobContext = {
 }
 
 export type JobContextMap = Map<IJob, JobContext>
+
+export type CoreConfig = {
+  ignoreKinds?: ts.SyntaxKind[]
+  ignores?: ((node: ts.Node, context: ts.TransformationContext) => boolean)[]
+  collectAdditions?: (job: IJob, additions: any[], origin: ts.Node, transformed: ts.Node, next: ts.Node) => void
+
+  i18nCallName?: string
+
+  [key: string]: any
+}

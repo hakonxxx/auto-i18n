@@ -11,7 +11,6 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
   const optsProperties: ts.ObjectLiteralElementLike[] = []
   if (ts.isTemplateExpression(node)) {
     const { namePairs, transformed } = extractTemplateArgs(node)
-    phrase = transformed
     const argsProperties = namePairs.map(({ key, expr, short }) => {
       if (short && ts.isIdentifier(expr)) {
         return ts.factory.createShorthandPropertyAssignment(key)
@@ -19,6 +18,8 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
       return ts.factory.createPropertyAssignment(key, expr)
     })
     const args = ts.factory.createObjectLiteralExpression(argsProperties, true)
+    optsProperties.push(ts.factory.createPropertyAssignment('args', args))
+    phrase = transformed
     if (originArg && ts.isObjectLiteralExpression(originArg)) {
       originArg?.forEachChild(property => {
         if (ts.isObjectLiteralElementLike(property)) {
@@ -26,13 +27,13 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
         }
       })
     }
-    optsProperties.push(ts.factory.createPropertyAssignment('args', args))
     opts = ts.factory.createObjectLiteralExpression(optsProperties, true)
   } else {
     phrase = ts.isJsxText(node) ? node.text.trim() : node.text
   }
 
-  if (!phrase.match(/[a-zA-Z]{2}/)) return null
+  // TODO:
+  if (!phrase.match(/[a-zA-Z]{2}/)) return { transformed: null }
 
   const call = ts.factory.createCallExpression(
     ts.factory.createIdentifier(i18nCallName),
@@ -40,9 +41,15 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
     [ts.factory.createStringLiteral(phrase), ...opts ? [opts] : []]
   )
 
-  if (!ts.isJsxText(node)) return call
+  if (!ts.isJsxText(node)) return {
+    transformed: call,
+    addition: [phrase, optsProperties],
+  }
 
-  return ts.factory.createJsxExpression(undefined, call)
+  return {
+    transformed: ts.factory.createJsxExpression(undefined, call),
+    addition: [phrase, optsProperties],
+  }
 }
 
 const wrapCallRule: Rule = (origin, transformed) =>
@@ -56,9 +63,9 @@ const wrapCallRule: Rule = (origin, transformed) =>
   )
 
 export const wrapCall = new Transformer(
-  (origin, transformed, context, opts) => transformWrapCall(
+  (origin, transformed, context, config) => transformWrapCall(
     transformed as EndpointExpression,
-    opts?.i18nCallName
+    config?.i18nCallName
   ),
   [wrapCallRule]
 )

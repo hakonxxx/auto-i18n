@@ -1,8 +1,10 @@
 import ts from 'typescript'
+import { isInvalidBinaryExpression } from './is.js'
 
 export const generateTemplate = (nodes: ts.Expression[]) => {
   const args: (ts.Expression | string)[] = ['']
-  nodes.forEach((node) => {
+  for (let i = 0; i < nodes.length; i += 1) {
+    let node = nodes[i]
     if (ts.isParenthesizedExpression(node)) {
       node = node.expression
     }
@@ -29,9 +31,11 @@ export const generateTemplate = (nodes: ts.Expression[]) => {
         args.push(node.text)
       }
     } else {
+      if (isInvalidBinaryExpression(node)) return null
+
       args.push(node)
     }
-  })
+  }
   const head = ts.factory.createTemplateHead(args[0] as string)
   const spans: ts.TemplateSpan[] = []
   for (let i = 1; i < args.length; i += 1) {

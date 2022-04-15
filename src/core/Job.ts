@@ -1,7 +1,6 @@
 import { IJob, ITask, JobConfig } from '../types.js'
 
 const baseJobConfig: JobConfig = {
-  ignoreInvalid: true
 }
 
 export class Job implements IJob {

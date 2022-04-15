@@ -1,68 +1,40 @@
 import ts from 'typescript'
-import { IJob, JobContextMap } from '../types.js'
-
-type CoreConfig = {
-  ignoreKinds?: ts.SyntaxKind[]
-}
-
-const baseConfig: CoreConfig = {
-  ignoreKinds: [
-    ts.SyntaxKind.EnumDeclaration,
-    ts.SyntaxKind.InterfaceDeclaration,
-    ts.SyntaxKind.TypeLiteral,
-    ts.SyntaxKind.TypeParameter,
-    ts.SyntaxKind.TypeReference,
-    ts.SyntaxKind.TypeAliasDeclaration,
-    ts.SyntaxKind.ElementAccessExpression,
-    ts.SyntaxKind.ModuleDeclaration,
-  ]
-}
+import { IJob, JobContextMap, CoreConfig } from '../types.js'
 
 export class Core {
   static instance: Core | undefined
   static getInstance(sourceFile: ts.Node, config?: CoreConfig) {
     return Core.instance = Core.instance || new Core(sourceFile, config)
   }
-  static prepareContext(jobs: IJob[], node: ts.Node, context: ts.TransformationContext) {
-    const locks: boolean[] = []
-    const unlocks: boolean[] = []
-    // TODO: more context
-    jobs.forEach(job => {
-      locks.push(!!job.jobConfig?.lockKinds?.includes(node.kind))
-      unlocks.push(!!job.jobConfig?.unlockKinds?.includes(node.kind))
-    })
-    return {
-      locks,
-      unlocks
-    }
-  }
-  static executeJobs(jobs: IJob[], node: ts.Node, transformed: ts.Node, context: ts.TransformationContext) {
+  static executeJobs(jobs: IJob[], node: ts.Node, transformed: ts.Node, context: ts.TransformationContext, config?: CoreConfig) {
     let next: ts.Node = transformed
     for (let i = 0; i < jobs.length; i += 1) {
-      const jobRes = Core.executeJob(jobs[i], node, next, context)
-      if (jobRes) {
-        next = jobRes
-      } else if (jobs[i].jobConfig?.ignoreInvalid) return null
+      next = Core.executeJob(jobs[i], node, next, context, config) || next
     }
     return next
   }
-  static executeJob(job: IJob, node: ts.Node, transformed: ts.Node, context: ts.TransformationContext) {
+  static executeJob(job: IJob, node: ts.Node, transformed: ts.Node, context: ts.TransformationContext, config?: CoreConfig) {
     let next: ts.Node = transformed
+    const additions = new Array(job.tasks.length).fill(null)
     for (let i = 0; i < job.tasks.length; i += 1) {
       const { rules, transform, taskConfig } = job.tasks[i]
       let taskRes: ts.Node | null = null
-      try {
-        if (rules.every(rule => rule(node, next, context))) {
-          taskRes = transform(node, next, context)
-        }
-      } catch (err) {
-        console.log(err)
+      if (rules.every(rule => rule(node, next, context, config))) {
+        const { transformed, addition } = transform(node, next, context, config)
+        taskRes = transformed
+        additions[i] = addition
       }
       if (taskRes) {
         next = taskRes
       } else if (!taskConfig?.ignoreInvalid) return null
     }
+    config?.collectAdditions?.(job, additions, node, transformed, next)
     return next
+  }
+  static isIgnore(node: ts.Node, context: ts.TransformationContext, config?: CoreConfig) {
+    if (config?.ignoreKinds?.includes(node.kind)) return true
+    if (config?.ignores?.some(i => i(node, context))) return true
+    return false
   }
 
   sourceFile: ts.Node
@@ -90,36 +62,54 @@ export class Core {
     this.jobContextMap.delete(job)
   }
 
+  beforeTraverse(node: ts.Node, context: ts.TransformationContext) {
+    const locks: boolean[] = []
+    const unlocks: boolean[] = []
+    // TODO: more context
+    this.jobs.forEach(job => {
+      locks.push(!!job.jobConfig?.lock?.(node, context))
+      unlocks.push(!!job.jobConfig?.unlock?.(node, context))
+    })
+    const unlockJobs: IJob[] = []
+    this.jobs.forEach((job, i) => {
+      const lockStack = this.jobContextMap.get(job)?.lockStack
+      if (lockStack) {
+        const lastStatus = lockStack[lockStack.length - 1]
+        if (!lastStatus) {
+          lockStack.push(locks[i])
+        } else {
+          lockStack.push(!unlocks[i])
+        }
+      }
+      if (!lockStack?.[lockStack.length - 1]) {
+        unlockJobs.push(job)
+      }
+    })
+    return {
+      unlockJobs
+    }
+  }
+
+  afterTraverse() {
+    this.jobs.forEach(job => {
+      this.jobContextMap.get(job)?.lockStack.pop()
+    })
+  }
+
   traverse() {
     return ts.transform(
       this.sourceFile,
       [
         (context) => (root) => {
+          if (Core.isIgnore(root, context, this.config)) return root
           const visit: ts.Visitor = (node) => {
-            // if (this.config?.ignoreKinds?.includes(node.kind)) return node
-            const { locks, unlocks } = Core.prepareContext(this.jobs, node, context)
-            const unlockJobs: IJob[] = []
-            this.jobs.forEach((job, i) => {
-              const lockStack = this.jobContextMap.get(job)?.lockStack
-              if (lockStack) {
-                const lastStatus = lockStack[lockStack.length - 1]
-                if (!lastStatus) {
-                  lockStack.push(locks[i])
-                } else {
-                  lockStack.push(!unlocks[i])
-                }
-              }
-              if (!lockStack?.[lockStack.length - 1]) {
-                unlockJobs.push(job)
-              }
-            })
-            console.log(node.kind)
+            if (Core.isIgnore(node, context, this.config)) return node
+            const { unlockJobs } = this.beforeTraverse(node, context)
             // from bottom to top
-            const transformed = ts.visitEachChild(node, visit, context)
-            this.jobs.forEach(job => {
-              this.jobContextMap.get(job)?.lockStack.pop()
-            })
-            return Core.executeJobs(unlockJobs, node, transformed, context) || transformed
+            let transformed = ts.visitEachChild(node, visit, context)
+            transformed = Core.executeJobs(unlockJobs, node, transformed, context, this.config) || transformed
+            this.afterTraverse()
+            return transformed
           }
           return ts.visitNode(root, visit)
         },
@@ -127,4 +117,51 @@ export class Core {
       // { jsx: ts.JsxEmit.React }
     )
   }
+}
+
+const baseConfig: CoreConfig = {
+  ignores: [
+    (node) => {
+      const fullText = node.getFullText()
+      const commentRanges = ts.getLeadingCommentRanges(fullText, 0)
+      if (commentRanges?.some(({ pos, end }) => fullText.slice(pos, end + 1).match(/i18n ignore/ig))) return true
+      return false
+    },
+    (node) => {
+      if (!ts.isCallExpression(node)) return false
+      let callName = ''
+      if (ts.isIdentifier(node.expression)) {
+        callName = node.expression.escapedText.toString()
+      } else if (ts.isPropertyAccessExpression(node.expression)) {
+        callName = node.expression.name.escapedText.toString()
+      }
+      return [
+        'useColorModeValue',
+        'useTranslation',
+        'log',
+        'translationFn',
+        'addEventListener',
+        'removeEventListener',
+        'format',
+        'emit',
+        'on',
+        'off',
+        'mode',
+        'url',
+      ].includes(callName)
+    }
+  ],
+  ignoreKinds: [
+    ts.SyntaxKind.EnumDeclaration,
+    ts.SyntaxKind.InterfaceDeclaration,
+    ts.SyntaxKind.TypeLiteral,
+    ts.SyntaxKind.TypeParameter,
+    ts.SyntaxKind.TypeReference,
+    ts.SyntaxKind.TypeAliasDeclaration,
+    ts.SyntaxKind.ElementAccessExpression,
+    ts.SyntaxKind.ModuleDeclaration,
+  ],
+  collectAdditions: (job, additions) => console.log(additions),
+
+  i18nCallName: 'i18nCall',
 }

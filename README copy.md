@@ -17,47 +17,7 @@
 2. ObjectLiteralExpression.PropertyAssignment: [PropertyAssignment.initializer]
 3. JsxAttributes.properties: [JsxAttribute.initializer]
 
-ts.getLeadingCommentRanges(fileFullText, pos)
-ts.getTrailingCommentRanges(fileFullText, end)
-如果注释出现在pos === 0的位置，忽略整个文件
-code.slice(MultiLineCommentTrivia.pos, MultiLineCommentTrivia.end).match(/i18n ignore/ig)
-code.slice(SingleLineCommentTrivia.pos, SingleLineCommentTrivia.end).match(/i18n ignore/ig)
-
-
-## ignore settings
-(node) => boolean
-1. a.format: (node) => node.kind === CallExpression && node.expression.name === 'format'
-
-(node, kind) => boolean
-1. a.format: (node, kind = CallExpression) => node.expression.name === 'format'
-2. log: (node, kind = CallExpression) => node.expression.name === 'log' || node.expression.escapedText === 'log'
-
-ignoreCallName: (node) => {
-  const [name, type] = ['format', 'all']
-  // all, propertyAccess, directCall
-  if (type === 'all') {
-    return node.expression.name === name || node.expression.escapedText === name
-  }
-  if (type === 'propertyAccess') {
-    return node.expression.name === name
-  }
-  return node.expression.escapedText === name
-}
 ### ignore list
-useColorModeValue
-useTranslation
-log
-translationFn
-addEventListener
-removeEventListener
-.format
-emit
-on
-off
-mode
-url
-
-
 ConditionalExpression[whenTrue | whenFalse] 
 
 

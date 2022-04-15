@@ -7,6 +7,7 @@ import { wrapCall } from './transformer/wrapCall.js'
 
 import { Core } from './core/index.js'
 import { Job } from './core/Job.js'
+import { isInvalidBinaryExpression } from './utils/is.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -24,12 +25,17 @@ const sourceFile = ts.createSourceFile(
 )
 
 const core = Core.getInstance(sourceFile)
-const job1 = [plusToTemplate, wrapCall]
+const job1 = [
+  plusToTemplate,
+  wrapCall
+]
 // const job2 = [parseCommentArgs, parseFunctionArgsAfterSomeComment]
 core.addJob(new Job(job1, {
-  lockKinds: [
-    ts.SyntaxKind.TaggedTemplateExpression
-  ]
+  lock: (node) => {
+    if (ts.isTaggedTemplateExpression(node)) return true
+    if (isInvalidBinaryExpression(node)) return true
+    return false
+  }
 }))
 
 const result = core.traverse()
