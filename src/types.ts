@@ -22,8 +22,29 @@ export interface Rule {
   (originExpr: ts.Node, transformed: ts.Node | null, context: ts.TransformationContext, opts?: any): boolean
 }
 
-export interface ITransformer {
+export type TaskConfig = {
+  ignoreInvalid?: boolean
+}
+
+export interface ITask {
   transform: Transform
   rules: Rule[]
-  jump?: boolean
+  taskConfig?: TaskConfig
 }
+
+export type JobConfig = {
+  ignoreInvalid?: boolean
+  lockKinds?: ts.SyntaxKind[]
+  unlockKinds?: ts.SyntaxKind[]
+}
+
+export interface IJob {
+  tasks: ITask[]
+  jobConfig?: JobConfig
+}
+
+export type JobContext = {
+  lockStack: boolean[]
+}
+
+export type JobContextMap = Map<IJob, JobContext>

@@ -1,15 +1,7 @@
 # auto-i18n
 
 ## ignore
-1. EnumDeclaration
-2. InterfaceDeclaration
-3. TypeLiteral
-4. TypeParameter
-5. TypeReference
-6. TypeAliasDeclaration
 7. file name /type\.ts|(.+\.d\.ts)/
-8. ElementAccessExpression
-9. ModuleDeclaration
 
 ## top-level entry
 1. VariableDeclaration.initializer
@@ -64,16 +56,6 @@ on
 off
 mode
 url
-
-## end point
-1. transform string plus to NoSubstitutionTemplateLiteral or TemplateLiteral(maybe need to traverse if there are args or expression)
-2. if isn`t a string plus, directly transform phrase to function call if the phrase is matched
-
-BinaryExpression: traverse first
-a + b + c => BinaryExpression(BinaryExpression(a + b), c)
-if there is any side of a BinaryExpression match the phrase rule, 
-
-then generate TemplateLiteral(`${a + b}${c}`), return this node (notice that, a + c has been transformed to target node when traverse)
 
 
 ConditionalExpression[whenTrue | whenFalse] 

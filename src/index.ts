@@ -6,16 +6,18 @@ import { plusToTemplate } from './transformer/plusToTemplate.js'
 import { wrapCall } from './transformer/wrapCall.js'
 
 import { Core } from './core/index.js'
+import { Job } from './core/Job.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const code = fs.readFileSync(
-  path.resolve(__dirname, '../scripts/template/string-plus.ts'),
+  // path.resolve(__dirname, '../scripts/template/string-plus.ts'),
+  path.resolve(__dirname, '../scripts/template/test1.tsx'),
   'utf-8'
 )
 const sourceFile = ts.createSourceFile(
-  'test.ts',
+  'test.tsx',
   code,
   ts.ScriptTarget.Latest,
   /*setParentNodes */ true
@@ -24,7 +26,11 @@ const sourceFile = ts.createSourceFile(
 const core = Core.getInstance(sourceFile)
 const job1 = [plusToTemplate, wrapCall]
 // const job2 = [parseCommentArgs, parseFunctionArgsAfterSomeComment]
-core.addJob(job1)
+core.addJob(new Job(job1, {
+  lockKinds: [
+    ts.SyntaxKind.TaggedTemplateExpression
+  ]
+}))
 
 const result = core.traverse()
 const transformedNodes = result.transformed[0]

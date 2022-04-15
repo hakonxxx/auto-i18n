@@ -8,5 +8,8 @@ export const transformPlusToTemplate = (originExpr: ts.BinaryExpression) =>
 
 export const plusToTemplate = new Transformer(
   (origin, transformed) => transformPlusToTemplate(transformed as ts.BinaryExpression),
-  [isPlusBinaryExpression]
+  [isPlusBinaryExpression],
+  {
+    ignoreInvalid: true
+  }
 )

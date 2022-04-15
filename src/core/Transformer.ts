@@ -1,21 +1,25 @@
-import { Rule, Transform, ITransformer } from '../types.js'
+import { Rule, Transform, ITask } from '../types.js'
 
-export class Transformer implements ITransformer {
-  transform
-  rules
-  jump
+const baseTaskConfig: ITask['taskConfig'] = {
+  ignoreInvalid: false,
+}
 
-  constructor(transform: Transform, rules: Rule[], jump?: boolean) {
+export class Transformer implements ITask {
+  transform: ITask['transform']
+  rules: ITask['rules']
+  taskConfig: ITask['taskConfig']
+
+  constructor(transform: Transform, rules: Rule[], taskConfig?: ITask['taskConfig']) {
     this.transform = transform
     this.rules = rules
-    this.jump = jump
+    this.taskConfig = { ...baseTaskConfig, ...taskConfig }
   }
 
-  copy(transform?: Transform, rules?: Rule[], jump?: boolean) {
+  copy(transform?: Transform, rules?: Rule[], taskConfig?: ITask['taskConfig']) {
     return new Transformer(
       transform || this.transform,
       rules || [...this.rules],
-      jump || this.jump
+      taskConfig || { ... this.taskConfig }
     )
   }
 }

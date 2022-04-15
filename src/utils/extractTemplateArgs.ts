@@ -37,6 +37,6 @@ export const extractTemplateArgs = (node: ts.TemplateExpression, transform = tra
   })
   return {
     namePairs,
-    transformed: ts.factory.createStringLiteral(transformed)
+    transformed,
   }
 }
