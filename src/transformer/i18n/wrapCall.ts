@@ -8,7 +8,6 @@ import { ignoreI18n, updateI18nConfig } from './common.js'
 const wrapCallRule: Rule = (origin, transformed, context, config) => updateI18nConfig(
   config,
   () =>
-    !!transformed &&
     (!transformed.parent || !ts.isTemplateExpression(transformed.parent)) &&
     !ignoreI18n(origin.parent, config) &&
     isEndpoint(transformed),

@@ -17,14 +17,14 @@ export interface TransformExpressionName {
 }
 
 export interface Transform {
-  (originExpr: ts.Node, transformed: ts.Node | null, context: ICoreContext, config: CoreConfig): {
+  (originExpr: ts.Node, transformed: ts.Node, context: ICoreContext, config: CoreConfig): {
     transformed: ts.Node | null
     addition?: any[]
   }
 }
 
 export interface Rule {
-  (originExpr: ts.Node, transformed: ts.Node | null, context: ICoreContext, config: CoreConfig): boolean
+  (originExpr: ts.Node, transformed: ts.Node, context: ICoreContext, config: CoreConfig): boolean
 }
 
 export type TaskConfig = {

@@ -8,7 +8,6 @@ import { transformWrapCall } from './transformWrapCall.js'
 export const replaceCallRule: Rule = (origin, transformed, context, config) => updateI18nConfig(
   config,
   () =>
-    !!transformed &&
     ts.isCallExpression(transformed) &&
     // (!transformed.parent || !ts.isTemplateExpression(transformed.parent)) &&
     !ignoreI18n(transformed, config) &&
