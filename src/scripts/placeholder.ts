@@ -1,3 +1,5 @@
+import { i18nPlaceholder } from '../constants.js'
+
 type PhaseOpts = {
   translationFileName?: string
   i18nKey?: string
@@ -5,9 +7,9 @@ type PhaseOpts = {
 
 declare global {
   interface Window {
-    i18nPlaceholder: (phase: string, opts?: PhaseOpts) => string
+    [i18nPlaceholder]: (phase: string, opts?: PhaseOpts) => string
   }
 }
-global.i18nPlaceholder = (phase) => phase
+global[i18nPlaceholder] = (phase) => phase
 
 export default {}

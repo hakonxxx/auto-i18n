@@ -1,11 +1,49 @@
 import ts from 'typescript'
 import { extractTemplateArgs } from '../utils/extractTemplateArgs.js'
-import { Rule } from '../types.js'
+import { Rule, EndpointExpression, Transform, CoreConfig } from '../types.js'
 import { Transformer } from '../core/Transformer.js'
+import { isEndpoint } from '../utils/is.js'
 
-type EndpointExpression = ts.TemplateExpression | ts.NoSubstitutionTemplateLiteral | ts.StringLiteral | ts.JsxText
+export const updateI18nConfig = (config: CoreConfig, callback: Function, replace: boolean) => {
+  const { i18nReplace } = config
+  config.i18nReplace = replace
+  const res = callback()
+  config.i18nReplace = i18nReplace
+  return res
+}
 
-export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18nCall', originArg?: ts.Node) => {
+export const ignoreI18n = (node: ts.Node | null, config: CoreConfig) =>
+  !node ||
+  (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    (
+      [
+        config.i18nCallName,
+        ...(config.i18nReplace ? [] : [config.i18nPlaceholder]),
+        ...config.i18nAlias || []
+      ].includes(node.expression.escapedText.toString()) ||
+      (config.i18nReplace && node.expression.escapedText.toString() !== config.i18nPlaceholder)
+    )
+  )
+
+const wrapCallRule: Rule = (origin, transformed, context, config) => updateI18nConfig(
+  config,
+  () =>
+    !!transformed &&
+    (!transformed.parent || !ts.isTemplateExpression(transformed.parent)) &&
+    !ignoreI18n(origin.parent, config) &&
+    isEndpoint(transformed),
+  false
+)
+
+export const transformWrapCall: Transform = (origin, transformed, context, config) => {
+  const node = transformed as EndpointExpression
+  const { i18nCallName } = config
+  let originArg: ts.Node | undefined
+  if (config.i18nReplace && ts.isCallExpression(origin.parent)) {
+    originArg = origin.parent.arguments[1]
+  }
   let phrase: string = ''
   let opts: ts.ObjectLiteralExpression | undefined
   const optsProperties: ts.ObjectLiteralElementLike[] = []
@@ -32,8 +70,7 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
     phrase = ts.isJsxText(node) ? node.text.trim() : node.text
   }
 
-  // TODO:
-  if (!phrase.match(/[a-zA-Z]{2}/)) return { transformed: null }
+  if (!phrase.match(config.i18nMatch)) return { transformed: null }
 
   const call = ts.factory.createCallExpression(
     ts.factory.createIdentifier(i18nCallName),
@@ -41,31 +78,30 @@ export const transformWrapCall = (node: EndpointExpression, i18nCallName = 'i18n
     [ts.factory.createStringLiteral(phrase), ...opts ? [opts] : []]
   )
 
-  if (!ts.isJsxText(node)) return {
-    transformed: call,
+  if (
+    ts.isJsxText(node) ||
+    (node.parent && ts.isJsxAttribute(node.parent) && node.parent.initializer === node)
+  ) return {
+    transformed: ts.factory.createJsxExpression(undefined, call),
     addition: [phrase, optsProperties],
   }
-
   return {
-    transformed: ts.factory.createJsxExpression(undefined, call),
+    transformed: call,
     addition: [phrase, optsProperties],
   }
 }
 
-const wrapCallRule: Rule = (origin, transformed) =>
-  !!transformed &&
-  (!origin.parent || !ts.isTemplateExpression(origin.parent)) &&
-  (
-    ts.isTemplateExpression(transformed) ||
-    ts.isNoSubstitutionTemplateLiteral(transformed) ||
-    ts.isStringLiteral(transformed) ||
-    ts.isJsxText(transformed)
-  )
-
 export const wrapCall = new Transformer(
-  (origin, transformed, context, config) => transformWrapCall(
-    transformed as EndpointExpression,
-    config?.i18nCallName
+  (origin, transformed, context, config) => updateI18nConfig(
+    config,
+    () => {
+      const { i18nReplace } = config
+      config.i18nReplace = false
+      const res = transformWrapCall(origin, transformed, context, config)
+      config.i18nReplace = i18nReplace
+      return res
+    },
+    false
   ),
   [wrapCallRule]
 )

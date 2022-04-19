@@ -1,1 +1,3 @@
-const str4 = (str3 - `${str2}1`) + func(2 + '3${}' + `${str1}2`)
+() => {
+  i18nPlaceholder(`aaaa${a}` + c, { a: 2 })
+}

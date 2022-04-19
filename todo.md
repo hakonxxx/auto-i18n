@@ -3,7 +3,7 @@
 ## ignore
 7. file name /type\.ts|(.+\.d\.ts)/
 
-## top-level entry
+<!-- ## top-level entry
 1. VariableDeclaration.initializer
 2. BinaryExpression.right
 3. FunctionDeclaration.body
@@ -15,7 +15,7 @@
 ## second-level entry
 1. ArrayLiteralExpression.elements
 2. ObjectLiteralExpression.PropertyAssignment: [PropertyAssignment.initializer]
-3. JsxAttributes.properties: [JsxAttribute.initializer]
+3. JsxAttributes.properties: [JsxAttribute.initializer] -->
 
 ### ignore list
 ConditionalExpression[whenTrue | whenFalse] 
@@ -37,6 +37,7 @@ warningMessage
 pageTitle
 subTitle
 chartTitle
+placeholder
 
 object:
 placeholder

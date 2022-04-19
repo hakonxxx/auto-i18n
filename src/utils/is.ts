@@ -10,3 +10,10 @@ export const isInvalidBinaryExpression = (node: ts.Node) => ts.isBinaryExpressio
   ts.SyntaxKind.AmpersandAmpersandToken,
   ts.SyntaxKind.BarBarToken
 ].includes(node.operatorToken.kind)
+
+export const isEndpoint = (node: ts.Node) => [
+  ts.SyntaxKind.TemplateExpression,
+  ts.SyntaxKind.NoSubstitutionTemplateLiteral,
+  ts.SyntaxKind.StringLiteral,
+  ts.SyntaxKind.JsxText
+].includes(node.kind)

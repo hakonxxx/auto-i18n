@@ -20,11 +20,11 @@
       "esnext"
     ],
     "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-    },
+    // "paths": {
+    //   "@/*": [
+    //     "src/*"
+    //   ],
+    // },
     "incremental": true
   },
   "include": [
