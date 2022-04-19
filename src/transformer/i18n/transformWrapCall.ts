@@ -1,41 +1,6 @@
 import ts from 'typescript'
-import { extractTemplateArgs } from '../utils/extractTemplateArgs.js'
-import { Rule, EndpointExpression, Transform, CoreConfig } from '../types.js'
-import { Transformer } from '../core/Transformer.js'
-import { isEndpoint } from '../utils/is.js'
-
-export const updateI18nConfig = (config: CoreConfig, callback: Function, replace: boolean) => {
-  const { i18nReplace } = config
-  config.i18nReplace = replace
-  const res = callback()
-  config.i18nReplace = i18nReplace
-  return res
-}
-
-export const ignoreI18n = (node: ts.Node | null, config: CoreConfig) =>
-  !node ||
-  (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    (
-      [
-        config.i18nCallName,
-        ...(config.i18nReplace ? [] : [config.i18nPlaceholder]),
-        ...config.i18nAlias || []
-      ].includes(node.expression.escapedText.toString()) ||
-      (config.i18nReplace && node.expression.escapedText.toString() !== config.i18nPlaceholder)
-    )
-  )
-
-const wrapCallRule: Rule = (origin, transformed, context, config) => updateI18nConfig(
-  config,
-  () =>
-    !!transformed &&
-    (!transformed.parent || !ts.isTemplateExpression(transformed.parent)) &&
-    !ignoreI18n(origin.parent, config) &&
-    isEndpoint(transformed),
-  false
-)
+import { extractTemplateArgs } from '../../utils/extractTemplateArgs.js'
+import { EndpointExpression, Transform } from '../../types.js'
 
 export const transformWrapCall: Transform = (origin, transformed, context, config) => {
   const node = transformed as EndpointExpression
@@ -90,18 +55,3 @@ export const transformWrapCall: Transform = (origin, transformed, context, confi
     addition: [phrase, optsProperties],
   }
 }
-
-export const wrapCall = new Transformer(
-  (origin, transformed, context, config) => updateI18nConfig(
-    config,
-    () => {
-      const { i18nReplace } = config
-      config.i18nReplace = false
-      const res = transformWrapCall(origin, transformed, context, config)
-      config.i18nReplace = i18nReplace
-      return res
-    },
-    false
-  ),
-  [wrapCallRule]
-)

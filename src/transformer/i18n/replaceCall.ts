@@ -1,8 +1,9 @@
 import ts from 'typescript'
-import { Rule } from '../types.js'
-import { transformWrapCall, ignoreI18n, updateI18nConfig } from './wrapCall.js'
-import { Transformer } from '../core/Transformer.js'
-import { isEndpoint } from '../utils/is.js'
+import { Rule } from '../../types.js'
+import { ignoreI18n, updateI18nConfig } from './common.js'
+import { Transformer } from '../../core/Transformer.js'
+import { isEndpoint } from '../../utils/is.js'
+import { transformWrapCall } from './transformWrapCall.js'
 
 export const replaceCallRule: Rule = (origin, transformed, context, config) => updateI18nConfig(
   config,

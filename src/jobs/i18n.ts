@@ -1,7 +1,7 @@
 import ts from 'typescript'
 import { plusToTemplate } from '../transformer/plusToTemplate.js'
-import { wrapCall } from '../transformer/wrapCall.js'
-import { replaceCall } from '../transformer/replaceCall.js'
+import { wrapCall } from '../transformer/i18n/wrapCall.js'
+import { replaceCall } from '../transformer/i18n/replaceCall.js'
 
 import { Job } from '../core/Job.js'
 import { isInvalidBinaryExpression } from '../utils/is.js'
